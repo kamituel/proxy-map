@@ -86,7 +86,7 @@ being overwritten.
   (proxy/proxy {:a 1} handler))
 
 ;; Value was not overwritten
-(assoc m :a 1)
+(assoc m :a 2)
 => {:a 1}
 
 (assoc m :b 2)

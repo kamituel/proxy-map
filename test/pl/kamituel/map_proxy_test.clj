@@ -307,6 +307,6 @@
   (def m
     (proxy/proxy {:a 1} handler))
 
-  (assoc m :a 1)
+  (assoc m :a 2)
   (assoc m :b 2)
   (dissoc m :a))
