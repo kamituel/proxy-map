@@ -195,6 +195,21 @@
                             :replaced
                             (get m k))))))))))
 
+(deftest equiv-respects-on-get
+  (let [m-orig  {:a 1 :b 2}
+        m-proxy (sut/proxy m-orig
+                           (reify sut/Handler
+                             (on-get [_ m k]
+                               (if (= k :b)
+                                 :replaced
+                                 (get m k)))))]
+    (is (= {:a 1 :b :replaced}
+           m-proxy))
+    (is (= m-proxy
+           {:a 1 :b :replaced}))
+    (is (not= m-orig m-proxy))
+    (is (not= m-proxy m-orig))))
+
 (deftest behaves-like-a-map
 
   (is (= (sut/proxy {:a 1 :b "b"} identity-handler)

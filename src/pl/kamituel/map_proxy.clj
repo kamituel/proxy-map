@@ -17,7 +17,6 @@
 
   clojure.lang.IPersistentCollection
   (equiv [this other-m]
-    ;; TODO: on-get
     (.equiv (into {} other-m)
             (into {} this)))
 
