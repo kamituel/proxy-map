@@ -3,7 +3,14 @@
 A drop-in replacement for the core `{}` map that enables basic proxy functionalities similar to
 Javascript's [`Proxy`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy).
 
-## Usage
+## Key Characteristics
+
+- zero dependencies
+- provides handlers to alter behaviour of `get`, `assoc`, `dissoc`
+- supports nested maps
+- API inspired by Javascript `Proxy`
+
+## Usage Examples
 
 Example below implements a map that obscures any secrets within. This could be used to prevent
 passwords and secrets from being accidentally printed, logged or stored.
@@ -20,6 +27,8 @@ Secrets can be read by providing an explicit namespace to the map key keyword.
 
 (def hide-secrets-handler
   (reify proxy/Handler
+    (proxy-nested? [_]
+      false)
     (on-get [_ m k]
       (cond
         ;; Hide secrets
@@ -75,6 +84,8 @@ value being overwritten.
 
 (def handler
   (reify proxy/Handler
+    (proxy-nested? [_]
+      false)
     (on-get [_ m k]
       (get m k))
     (on-assoc [_ m k _v]
@@ -96,6 +107,46 @@ value being overwritten.
 ;; Cannot dissoc a value
 (dissoc m :a)
 => {:a 1}
+```
+
+Auto-proxying of any nested maps will be done if `proxy-nested?` returns a truthy value:
+
+```clojure
+(require '[pl.kamituel.map-proxy :as proxy])
+  
+(defn make-handler [proxy-nested?]
+  (reify proxy/Handler
+    (proxy-nested? [_]
+      proxy-nested?)
+    (on-get [_ m k]
+      (get m k))
+    (on-assoc [_ _m k _v]
+      (#{:a :b :c} k))
+    (on-dissoc [_ _m _k]
+      true)))
+  
+(defn do-things [m]
+  (-> m
+      (assoc :a "a"
+             :d "d")
+      (assoc-in [:b :a] "ba")
+      (assoc-in [:b :d] "bd")
+      (assoc-in [:b :c :d] "bcd")))
+  
+(-> {}
+    (proxy/proxy (make-handler false))
+    (do-things))
+;; {:a "a"
+;;  :b {:a "ba"
+;;      :d "bd"
+;;      :c {:d "bcd"}}}
+
+(-> {}
+    (proxy/proxy (make-handler true))
+    (do-things))
+;; {:a "a"
+;;  :b {:a "ba"
+;;      :c {}}}
 ```
 
 ## Dev

@@ -1,12 +1,18 @@
-(ns pl.kamituel.map-proxy)
+(ns pl.kamituel.map-proxy
+  (:require
+   [clojure.walk :as walk]))
 
 (declare ->MapProxy)
 
 (defprotocol Handler
+  (proxy-nested? [this])
   (on-get [this m k])
   (on-assoc [this m k v])
   (on-dissoc [this m k]))
 
+(declare proxy)
+
+;; See Potemkin's AbstractMap for inspiration.
 (deftype MapProxy [m handler]
 
   clojure.lang.MapEquivalence
@@ -19,12 +25,27 @@
   (equiv [this other-m]
     (.equiv (into {} other-m)
             (into {} this)))
+  (cons [this x]
+    (cond
+      (map? x)
+      (reduce #(apply assoc %1 %2) this x)
+
+      (instance? java.util.Map x)
+      (reduce #(apply assoc %1 %2) this (into {} x))
+
+      :else
+      (if-let [[k v] (seq x)]
+        (assoc this k v)
+        this)))
 
   clojure.lang.IPersistentMap
   (assoc [_ k v]
     (MapProxy.
      (if (on-assoc handler m k v)
-       (assoc m k v)
+       (assoc m k (if (and (map? v)
+                           (proxy-nested? handler))
+                    (proxy v handler)
+                    v))
        m)
      handler))
   (without [_ k]
@@ -73,5 +94,13 @@
                 {}
                 m))))
 
-(defn proxy [m handler]
-  (->MapProxy m handler))
+(defn proxy
+  [m handler]
+  (if (proxy-nested? handler)
+    (walk/postwalk
+     (fn [x]
+       (if (map? x)
+         (->MapProxy x handler)
+         x))
+     m)
+    (->MapProxy m handler)))
