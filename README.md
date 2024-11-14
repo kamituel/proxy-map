@@ -67,8 +67,8 @@ Secrets can be read by providing an explicit namespace to the map key keyword.
 ```
 
 This example shows the usage for `on-assoc` and `on-dissoc`. Proxied map will not allow any values
-from removed from the map. It allows `assoc`, but only if it wouldn't result in an existing value
-being overwritten.
+from being removed from the map. It allows `assoc`, but only if it wouldn't result in an existing
+value being overwritten.
 
 ```clojure
 (require '[pl.kamituel.map-proxy :as proxy])
@@ -85,14 +85,15 @@ being overwritten.
 (def m
   (proxy/proxy {:a 1} handler))
 
-;; Value was not overwritten
+;; Cannot overwrite a value that already exists in the map
 (assoc m :a 2)
 => {:a 1}
 
+;; Can assoc a new value (if key was not already present in the map)
 (assoc m :b 2)
 => {:a 1 :b 2}
 
-;; Value was not dissoced
+;; Cannot dissoc a value
 (dissoc m :a)
 => {:a 1}
 ```
