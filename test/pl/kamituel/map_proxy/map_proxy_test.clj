@@ -1,6 +1,6 @@
 (ns pl.kamituel.map-proxy.map-proxy-test
   (:require
-   [clojure.test :refer :all]
+   [clojure.test :refer [are deftest is testing]]
    [pl.kamituel.map-proxy.map-proxy :as sut]))
 
 (def identity-handler
