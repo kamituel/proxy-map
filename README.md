@@ -62,14 +62,14 @@ Note:
   altering the value on the fly.
 - All the `assoc` , `dissoc`, `get` operations got logged.
 
-See more examples in [the `./examples` directory](./examples):
+See more examples in the [`./examples`](./examples) directory:
 
 - [`hide-secrets`](./examples/pl/kamituel/map_proxy/examples/hide_secrets.clj) - 
   hide a config map behind a proxy to avoid a risk of accidentally leaking
   or printing secrets.
 - [`fixed-keys`](./examples/pl/kamituel/map_proxy/examples/fixed_keys.clj) -
   use a proxy to ensure no keys can be added or removed from a map.
-- [`proxy-nested`](./examples/pl/kamituel/map_proxy/examples/proxy-nested.clj) - 
+- [`proxy-nested`](./examples/pl/kamituel/map_proxy/examples/proxy_nested.clj) - 
   provide control over a map and all nested maps, recursively.
 
 ## Dev
