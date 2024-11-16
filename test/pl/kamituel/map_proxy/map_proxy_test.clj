@@ -1,7 +1,7 @@
-(ns pl.kamituel.map-proxy-test
+(ns pl.kamituel.map-proxy.map-proxy-test
   (:require
    [clojure.test :refer :all]
-   [pl.kamituel.map-proxy :as sut]))
+   [pl.kamituel.map-proxy.map-proxy :as sut]))
 
 (def identity-handler
   (reify sut/Handler
@@ -338,106 +338,3 @@
       (is (= 4 (get-in m [:a :b])))
       (is (= 16 (get-in m [:b :a])))
       (is (= 25 (get-in m [:c]))))))
-
-(comment
-
-  ;; Usage example from README
-
-  (require '[pl.kamituel.map-proxy :as proxy])
-
-  (def secret-keys
-    #{:password
-      :token
-      :api-key})
-
-  (def hide-secrets-handler
-    (reify proxy/Handler
-      (proxy-nested? [_]
-        false)
-      (on-get [_ m k]
-        (cond
-          ;; Hide secrets
-          (contains? secret-keys k)
-          :hidden-secret
-
-          ;; Allow reading secret when requested explicitely by using namespaced keyword
-          (= (namespace k) "secret")
-          (get m (keyword (name k)))
-
-          ;; All other keys
-          :else
-          (get m k)))
-      (on-assoc [_ _m _k _v]
-        true)
-      (on-dissoc [_ _m _k]
-        true)))
-
-  (def config
-    (-> {}
-        (proxy/proxy hide-secrets-handler)
-        (assoc :username     "kate"
-               :password     "secret!"
-               :api-hostname "localhost"
-               :api-key      "another secret!")))
-
-  (prn config)
-  (get config :username)
-  (get config :password)
-  (get config :secret/password))
-
-(comment
-
-  ;; Usage example from README
-
-  (require '[pl.kamituel.map-proxy :as proxy])
-
-  (def handler
-    (reify proxy/Handler
-      (proxy-nested? [_]
-        false)
-      (on-get [_ m k]
-        (get m k))
-      (on-assoc [_ m k _v]
-        (not (contains? m k)))
-      (on-dissoc [_ _m _k]
-        false)))
-
-  (def m
-    (proxy/proxy {:a 1} handler))
-
-  (assoc m :a 2)
-  (assoc m :b 2)
-  (dissoc m :a))
-
-(comment
-
-  ;; Usage example from README
-
-  (require '[pl.kamituel.map-proxy :as proxy])
-
-  (defn make-handler [proxy-nested?]
-    (reify proxy/Handler
-      (proxy-nested? [_]
-        proxy-nested?)
-      (on-get [_ m k]
-        (get m k))
-      (on-assoc [_ _m k _v]
-        (#{:a :b :c} k))
-      (on-dissoc [_ _m _k]
-        true)))
-
-  (defn do-things [m]
-    (-> m
-        (assoc :a "a"
-               :d "d")
-        (assoc-in [:b :a] "ba")
-        (assoc-in [:b :d] "bd")
-        (assoc-in [:b :c :d] "bcd")))
-
-  (-> {}
-      (proxy/proxy (make-handler false))
-      (do-things))
-
-  (-> {}
-      (proxy/proxy (make-handler true))
-      (do-things)))

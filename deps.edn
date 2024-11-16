@@ -6,4 +6,5 @@
          :extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
          :extra-paths ["test"]}
   :dev  {:extra-deps {cider/cider-nrepl {:mvn/version "0.50.0"}}
+         :extra-paths ["examples"]
          :main-opts ["-m" "nrepl.cmdline" "--middleware" "[cider.nrepl/cider-middleware]"]}}}

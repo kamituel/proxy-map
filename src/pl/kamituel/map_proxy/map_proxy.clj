@@ -1,4 +1,4 @@
-(ns pl.kamituel.map-proxy
+(ns pl.kamituel.map-proxy.map-proxy
   (:require
    [clojure.walk :as walk]))
 

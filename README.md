@@ -3,151 +3,74 @@
 A drop-in replacement for the core `{}` map that enables basic proxy functionalities similar to
 Javascript's [`Proxy`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy).
 
-## Key Characteristics
-
 - zero dependencies
 - provides handlers to alter behaviour of `get`, `assoc`, `dissoc`
 - supports nested maps
-- API inspired by Javascript `Proxy`
+- API inspired by Javascript [`Proxy`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy)
 
-## Usage Examples
-
-Example below implements a map that obscures any secrets within. This could be used to prevent
-passwords and secrets from being accidentally printed, logged or stored.
-
-Secrets can be read by providing an explicit namespace to the map key keyword.
+## Usage
 
 ```clojure
-(require '[pl.kamituel.map-proxy :as proxy])
+(require '[pl.kamituel.map-proxy.map-proxy :as proxy])
 
-(def secret-keys
-  #{:password
-    :token
-    :api-key})
+(-> ;; Regular map
+    {:x 1
+     :y 2}
+ 
+    ;; Gets hidden behind a proxy
+    (proxy/proxy
+     (reify proxy/Handler
+       
+       ;; Return true for any descendant maps to get
+       ;; proxied too.
+       (proxy-nested? [this]
+         false)
 
-(def hide-secrets-handler
-  (reify proxy/Handler
-    (proxy-nested? [_]
-      false)
-    (on-get [_ m k]
-      (cond
-        ;; Hide secrets
-        (contains? secret-keys k)
-        :hidden-secret
+       ;; Called when a value is retrieved. In this
+       ;; example it will return a square of that
+       ;; value.
+       (on-get [this m k]
+         (println "Get" k)
+         (let [v (get m k)]
+           (* v v)))
 
-        ;; Allow reading secret when requested explicitely by
-        ;; using namespaced keyword
-        (= (namespace k) "secret")
-        (get m (keyword (name k)))
+       ;; Called when a value is set. Return false
+       ;; to block assoc.
+       (on-assoc [this m k v]
+         (println "Assoc" k v)
+         true)
 
-        ;; All other keys
-        :else
-        (get m k)))
-    (on-assoc [_ _m _k _v]
-      true)
-    (on-dissoc [_ _m _k]
-      true)))
+       ;; Called when a value is unset. Return false
+       ;; to block dissoc.
+       (on-dissoc [this m k]
+         (println "Dissoc" k)
+         true)))
 
-(def config
-  (-> {}
-      (proxy/proxy hide-secrets-handler)
-      (assoc :username     "kate"
-             :password     "secret!"
-             :api-hostname "localhost"
-             :api-key      "another secret!")))
+    (assoc :z 3)
+    (dissoc :x)
+    :y)
 
-;; Obscures password when printing
-(prn config)
-;; {:username "kate",
-;;  :password :hidden-secret,
-;;  :api-hostname "localhost",
-;;  :api-key :hidden-secret}
-
-(get config :username)
-;; "kate"
-
-;; Obscures passwords when getting using the regular key
-(get config :password)
-;; :hidden-secret
-
-;; Allows reading password when getting using the namespaced key
-(get config :secret/password)
-;; "secret!
+ ; Assoc :z 3
+ ; Dissoc :x
+ ; Get :y
+ 4
 ```
 
-This example shows the usage for `on-assoc` and `on-dissoc`. Proxied map will not allow any values
-from being removed from the map. It allows `assoc`, but only if it wouldn't result in an existing
-value being overwritten.
+Note:
 
-```clojure
-(require '[pl.kamituel.map-proxy :as proxy])
+- This form evaluates to `4`, even though the value of `:y` is `2`. This is `on-get` handler
+  altering the value on the fly.
+- All the `assoc` , `dissoc`, `get` operations got logged.
 
-(def handler
-  (reify proxy/Handler
-    (proxy-nested? [_]
-      false)
-    (on-get [_ m k]
-      (get m k))
-    (on-assoc [_ m k _v]
-      (not (contains? m k)))
-    (on-dissoc [_ _m _k]
-      false)))
+See more examples in [the `./examples` directory](./examples):
 
-(def m
-  (proxy/proxy {:a 1} handler))
-
-;; Cannot overwrite a value that already exists in the map
-(assoc m :a 2)
-=> {:a 1}
-
-;; Can assoc a new value (if key was not already present in the map)
-(assoc m :b 2)
-=> {:a 1 :b 2}
-
-;; Cannot dissoc a value
-(dissoc m :a)
-=> {:a 1}
-```
-
-Auto-proxying of any nested maps will be done if `proxy-nested?` returns a truthy value:
-
-```clojure
-(require '[pl.kamituel.map-proxy :as proxy])
-  
-(defn make-handler [proxy-nested?]
-  (reify proxy/Handler
-    (proxy-nested? [_]
-      proxy-nested?)
-    (on-get [_ m k]
-      (get m k))
-    (on-assoc [_ _m k _v]
-      (#{:a :b :c} k))
-    (on-dissoc [_ _m _k]
-      true)))
-  
-(defn do-things [m]
-  (-> m
-      (assoc :a "a"
-             :d "d")
-      (assoc-in [:b :a] "ba")
-      (assoc-in [:b :d] "bd")
-      (assoc-in [:b :c :d] "bcd")))
-  
-(-> {}
-    (proxy/proxy (make-handler false))
-    (do-things))
-;; {:a "a"
-;;  :b {:a "ba"
-;;      :d "bd"
-;;      :c {:d "bcd"}}}
-
-(-> {}
-    (proxy/proxy (make-handler true))
-    (do-things))
-;; {:a "a"
-;;  :b {:a "ba"
-;;      :c {}}}
-```
+- [`hide-secrets`](./examples/pl/kamituel/map_proxy/examples/hide_secrets.clj) - 
+  hide a config map behind a proxy to avoid a risk of accidentally leaking
+  or printing secrets.
+- [`fixed-keys`](./examples/pl/kamituel/map_proxy/examples/fixed_keys.clj) -
+  use a proxy to ensure no keys can be added or removed from a map.
+- [`proxy-nested`](./examples/pl/kamituel/map_proxy/examples/proxy-nested.clj) - 
+  provide control over a map and all nested maps, recursively.
 
 ## Dev
 
